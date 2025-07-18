@@ -8,8 +8,8 @@ import (
 
 	_ "github.com/dr4hcu5-jan/viper-vault/remote"
 	_ "github.com/dr4hcu5-jan/viper-vault/remote/vault"
-	"github.com/joho/godotenv"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 
 	"microservice/internal/configuration/vault"
