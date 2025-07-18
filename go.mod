@@ -14,7 +14,7 @@ require (
 	github.com/qustavo/dotsql v1.2.0
 	github.com/stretchr/testify v1.10.0
 	github.com/wisdom-oss/common-go/v3 v3.2.1
-	openapi.tanna.dev/go/validator v0.4.0
+	openapi.tanna.dev/go/validator v0.4.1
 )
 
 require (
