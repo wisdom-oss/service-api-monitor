@@ -7,7 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.132.0
 	github.com/gin-contrib/requestid v1.0.5
 	github.com/gin-gonic/gin v1.10.1
-	github.com/hashicorp/vault/api v1.16.0
+	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/userpass v0.9.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
