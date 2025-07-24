@@ -6,7 +6,7 @@
             "mode": "debug",
             "request": "launch",
             "program": "${workspaceFolder}",
-            "envFile": "${workspaceFolder}/.env",
+            //"envFile": "${workspaceFolder}/.env",
             "hideSystemGoroutines": true,
             "internalConsoleOptions": "openOnSessionStart"
         },
@@ -16,7 +16,7 @@
             "mode": "debug",
             "request": "launch",
             "program": "${workspaceFolder}",
-            "envFile": "${workspaceFolder}/.env",
+            //"envFile": "${workspaceFolder}/.env",
             "hideSystemGoroutines": true,
             "internalConsoleOptions": "openOnSessionStart",
             "buildFlags": ["-tags=docker"]
