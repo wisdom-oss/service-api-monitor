@@ -65,7 +65,7 @@ func StatusWS(c *gin.Context) {
 	go func() {
 		for {
 			if isClosed {
-				continue
+				return
 			}
 			msgType, content, err := conn.ReadMessage()
 			if err != nil {
