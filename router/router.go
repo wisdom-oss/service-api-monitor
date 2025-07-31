@@ -21,7 +21,7 @@ func Configure() (*gin.Engine, error) {
 
 	v1 := r.Group("/v1")
 	{
-		v1.GET("/", v1Routes.BasicHandler)
+		v1.GET("/", v1Routes.StatusWS)
 	}
 
 	return r, nil

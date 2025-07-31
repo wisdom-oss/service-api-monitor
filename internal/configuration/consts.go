@@ -36,4 +36,6 @@ const (
 	ConfigurationKey_OidcAuthority = "oidc.auhority"
 
 	ConfigurationKey_AuthorizationRequired = "authorization.required"
+
+	ConfigurationKey_TraefikAPIEndpoint = "traefik.api-endpoint"
 )
