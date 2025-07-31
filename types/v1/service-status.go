@@ -2,8 +2,14 @@ package v1
 
 import "time"
 
+const (
+	ServiceStatusOk     = "ok"
+	ServiceStatusDown   = "down"
+	ServiceStatusIssues = "issues"
+)
+
 type ServiceStatus struct {
-	ID         string    `json:"status"`
-	Name       string    `json:"name"`
+	Path       string    `json:"path"`
 	LastUpdate time.Time `json:"lastUpdate"`
+	Status     string    `json:"status"`
 }

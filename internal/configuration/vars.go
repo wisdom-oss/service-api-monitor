@@ -26,6 +26,7 @@ var environmentVariables = map[string][]string{
 	ConfigurationKey_HttpPort:              {"HTTP_PORT"},
 	ConfigurationKey_AuthorizationRequired: {"AUTH_REQUIRED", "AUTHORIZATION_REQUIRED"},
 	ConfigurationKey_OidcAuthority:         {"OIDC_AUTHORITY", "OIDC_ISSUER"},
+	ConfigurationKey_TraefikAPIEndpoint:    {"TRAEFIK_API_URL"},
 }
 
 var defaults = map[string]any{

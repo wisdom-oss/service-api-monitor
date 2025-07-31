@@ -1,13 +1,15 @@
 package v1
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/thanhpk/randstr"
 
 	wisdomTypes "github.com/wisdom-oss/common-go/v3/types"
 
@@ -30,21 +32,8 @@ var wsUpgrader = websocket.Upgrader{
 	},
 }
 
-type Message struct {
-	MessageType int
-	Content     []byte
-}
-
 func StatusWS(c *gin.Context) {
-
-	updateIntervalMillis, err := strconv.ParseInt(c.DefaultQuery("updateInterval", "15000"), 10, 0)
-	if err != nil {
-		c.Abort()
-		_ = c.Error(err)
-		return
-	}
-
-	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	ws, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		if err.Error() == "websocket: client sent data before handshake is complete" {
 			c.Abort()
@@ -54,93 +43,78 @@ func StatusWS(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("opened connection to:", conn.RemoteAddr().String())
-	_ = conn.WriteJSON(map[string]any{"updatesFor": c.Param("service")})
+	socketCtx, cancel := context.WithCancelCause(c)
 
-	incomingPings := make(chan v1.BinaryMessage, 500)
-	incomingMessages := make(chan any, 500)
-	closing := make(chan bool, 2)
-	isClosed := false
+	ws.SetPingHandler(nil) // use the default values provided by the package
+	ws.SetPongHandler(nil) // use the default values provided by the package
+	ws.SetCloseHandler(func(code int, text string) error {
+		message := websocket.FormatCloseMessage(code, text)
+		_ = ws.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+		cancel(errors.New("recevied close message"))
+		_ = ws.Close()
+		return nil
+	})
+
+	binaryMessages := make(chan v1.BinaryMessage)
+	textMessages := make(chan v1.TextMessage)
+
+	_, _ = startReceivingMessages(socketCtx, ws, binaryMessages, textMessages)
+
+	t := time.NewTicker(5 * time.Second)
+
+	pingMessage, _ := websocket.NewPreparedMessage(websocket.PingMessage, []byte("hello there"))
 
 	go func() {
 		for {
-			if isClosed {
+			select {
+			case <-socketCtx.Done():
 				return
+			case msg := <-binaryMessages:
+				fmt.Println("[Received Binary Message]", msg.ReceivedAt, msg.Content)
+			case msg := <-textMessages:
+				fmt.Println("[Received Text Message]", msg.ReceivedAt, msg.Content)
+			case <-t.C:
+				var statuses []v1.ServiceStatus
+
+				for range 10 {
+					statuses = append(statuses, v1.ServiceStatus{
+						Path:       randstr.Hex(12),
+						Status:     "TESTING",
+						LastUpdate: time.Now(),
+					})
+				}
+				_ = ws.WritePreparedMessage(pingMessage)
+
+				_ = ws.WriteJSON(statuses)
 			}
-			msgType, content, err := conn.ReadMessage()
-			if err != nil {
-				isClosed = true
-				closing <- true
-				if websocket.IsCloseError(err) {
-					conn.Close()
+		}
+	}()
+}
+
+func startReceivingMessages(ctx context.Context, ws *websocket.Conn, b chan v1.BinaryMessage, t chan v1.TextMessage) (context.Context, context.CancelCauseFunc) { //nolint:lll
+	receiverContext, cancel := context.WithCancelCause(ctx)
+
+	go func() {
+		for {
+			select {
+			case <-receiverContext.Done():
+				return
+			default:
+				messageType, message, err := ws.ReadMessage()
+				if err != nil {
+					cancel(err)
 					return
 				}
-			}
 
-			switch msgType {
-			case websocket.PongMessage:
-				// ignore these frames
-				break
-			case websocket.CloseMessage:
-				fmt.Println("received close message")
-				isClosed = true
-				closing <- true
-				msg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "good bye!")
-				conn.WriteMessage(websocket.CloseMessage, msg)
-				conn.Close()
-			case websocket.PingMessage:
-				incomingPings <- v1.BinaryMessage{
-					Type:    msgType,
-					Payload: content,
+				switch messageType {
+				case websocket.BinaryMessage:
+					b <- v1.BinaryMessage{Content: message, ReceivedAt: time.Now()}
+				case websocket.TextMessage:
+					t <- v1.TextMessage{Content: string(message), ReceivedAt: time.Now()}
 				}
-			case websocket.TextMessage:
-				incomingMessages <- v1.TextMessage{
-					Type:    msgType,
-					Payload: string(content),
-				}
-			case websocket.BinaryMessage:
-				incomingMessages <- v1.BinaryMessage{
-					Type:    msgType,
-					Payload: content,
-				}
-			default:
-				closing <- true
-				msg := websocket.FormatCloseMessage(websocket.CloseProtocolError, "invalid message type received")
-				conn.WriteMessage(websocket.CloseMessage, msg)
-				isClosed = true
 			}
 		}
 	}()
 
-	var ticker *time.Ticker
-	if updateIntervalMillis > 0 {
-		ticker = time.NewTicker(time.Duration(updateIntervalMillis * int64(time.Millisecond)))
-	} else {
-		ticker = time.NewTicker(5 * time.Second)
-	}
-
-	for {
-		if isClosed {
-			break
-		}
-		select {
-		case msg := <-incomingPings:
-			_ = conn.WriteMessage(websocket.PongMessage, msg.Payload)
-		case incoming := <-incomingMessages:
-			switch msg := incoming.(type) {
-			case v1.TextMessage:
-				fmt.Println("[INCOMING MESSAGE (Text)]", msg.Payload)
-			case v1.BinaryMessage:
-				fmt.Println("[INCOMING MESSAGE (Binary)]", msg.Payload)
-			}
-		case t := <-ticker.C:
-			conn.WriteMessage(websocket.PingMessage, nil)
-			fmt.Println("[PUSHING SERVICE STATUS]", t)
-			conn.WriteJSON("update")
-		default:
-			continue
-		}
-	}
-	conn.Close()
-
+	return receiverContext, cancel
 }
