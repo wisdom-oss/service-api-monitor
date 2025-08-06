@@ -1,26 +1,17 @@
 package v1
 
 import (
+	"encoding/json"
+
 	"github.com/go-playground/validator/v10"
 )
 
-var validate = validator.New(validator.WithRequiredStructEnabled())
-
 type Command struct {
-	Command string `json:"command" validate:"required"`
-	Data    any    `json:"data"`
+	Command string          `json:"command" validate:"required,gt=0"`
+	Data    json.RawMessage `json:"data"    validate:"required"`
 }
 
-const (
-	commandSubscribe       = "subscribe"
-	commandUnsubscribe     = "unsubscribe"
-	commandAddSubscription = "addSubscription"
-)
-
-func (c Command) Valid() (bool, []error) {
-	err := validate.Struct(c)
-	if err != nil {
-
-	}
-	return true, nil
+func (c Command) Validate() error {
+	v := validator.New()
+	return v.Struct(c)
 }
