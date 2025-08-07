@@ -1,37 +1,94 @@
-asyncapi: 2.0.0
+asyncapi: 3.0.0
 info:
-  title: Service Monitoring
+  title: AWARD API Status Monitor
   version: 1.0.0
-  description: This service allows watching the status of api paths
 
 servers:
   default:
-    url: "/api/status/v1"
-    protocol: ws
+    host: wisdom-demo.uol.de
+    protocol: wss
 
-channels: 
-  /:
-    publish:
-      operationId: send
-      message:
-        oneOf:
-          - $ref: "#/components/messages/subscribe"
-    subscribe:
-      operationId: receive
-      message:
-        $ref: '#/components/messages/status'
-            
-        
+
+channels:
+  status:
+    address: '/api/status/v1/'
+    messages:
+      subscribe:
+        $ref: "#/components/messages/subscribe"
+      update:
+        $ref: "#/components/messages/statusUpdate"
+
+operations:
+  subscribe:
+    action: send
+    channel:
+      $ref: "#/channels/status"
+    messages:
+      - $ref: '#/channels/status/messages/subscribe'
   
-
+  receiveUpdates:
+    action: receive
+    channel:
+      $ref: "#/channels/status"
+    messages:
+      - $ref: "#/channels/status/messages/update"
+    
 components:
+  schemas:
+    Command:
+      type: object
+      discriminator: command
+      properties: 
+        command:
+          type: string
+      required:
+        - command
+
+    subscribe:
+      description: command to subscribe to status updates
+      examples:
+        - command: subscribe
+          data:
+            paths:
+              - "/api/dwd"
+      allOf:
+        - $ref: "#/components/schemas/Command"
+        - type: object
+          properties: 
+            data:
+              type: object
+              required:
+                - paths
+              properties: 
+                paths:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                updateInterval:
+                  type: string
+                  format: "iso8601-duration"
+      
+
   messages:
-    status:
-      title: Status Overview
+    subscribe:
+      title: Subscribe
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/subscribe"
+
+    
+    statusUpdate:
+      title: Status Update
+      contentType: application/json
       payload:
         type: array
         items:
           type: object
+          required:
+            - path
+            - lastUpdate
+            - status
           properties: 
             path:
               type: string
@@ -42,25 +99,14 @@ components:
               type: string
               enum:
                 - ok
-                - down
                 - limited
-    subscribe:
-      title: Subscribe
-      payload:
-        type: object
-        properties: 
-          command:
-            type: string
-            enum:
-              - "subscribe"
-          data:
-            type: object
-            properties: 
-              paths:
-                type: array
-                items:
-                  type: string
-              updateInterval:
-                type: string
-                format: "iso8601-duration"
-                description: how often the server pushes out a new update
+                - down
+
+        
+
+        
+
+        
+
+    
+        
