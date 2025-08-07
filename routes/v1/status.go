@@ -2,18 +2,19 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/thanhpk/randstr"
 
 	wisdomTypes "github.com/wisdom-oss/common-go/v3/types"
 
+	"microservice/traefik"
 	v1 "microservice/types/v1"
+	"microservice/types/v1/commands"
 )
 
 const bufferSizeLimit = 2048
@@ -60,33 +61,76 @@ func StatusWS(c *gin.Context) {
 
 	_, _ = startReceivingMessages(socketCtx, ws, binaryMessages, textMessages)
 
-	t := time.NewTicker(5 * time.Second)
+	var t *time.Ticker
+	t = &time.Ticker{}
 
 	pingMessage, _ := websocket.NewPreparedMessage(websocket.PingMessage, []byte("hello there"))
 
 	go func() {
+		var command v1.Command
 		for {
 			select {
 			case <-socketCtx.Done():
 				return
 			case msg := <-binaryMessages:
-				fmt.Println("[Received Binary Message]", msg.ReceivedAt, msg.Content)
+				err := json.Unmarshal(msg.Content, &command)
+				if err != nil {
+					ws.CloseHandler()(websocket.CloseInternalServerErr, err.Error())
+					return
+				}
 			case msg := <-textMessages:
-				fmt.Println("[Received Text Message]", msg.ReceivedAt, msg.Content)
+				err := json.Unmarshal([]byte(msg.Content), &command)
+				if err != nil {
+					ws.CloseHandler()(websocket.CloseInternalServerErr, err.Error())
+					return
+				}
 			case <-t.C:
 				var statuses []v1.ServiceStatus
 
-				for range 10 {
-					statuses = append(statuses, v1.ServiceStatus{
-						Path:       randstr.Hex(12),
-						Status:     "TESTING",
-						LastUpdate: time.Now(),
-					})
+				statuses, err := traefik.ServiceStatus("/api/files")
+				if err != nil {
+					ws.CloseHandler()(websocket.CloseInternalServerErr, err.Error())
+					return
 				}
 				_ = ws.WritePreparedMessage(pingMessage)
+				_ = ws.WriteJSON(statuses)
+				continue
+			}
 
+			if err := command.Validate(); err != nil {
+				ws.CloseHandler()(websocket.ClosePolicyViolation, err.Error())
+				return
+			}
+
+			switch command.Command {
+			case "subscribe":
+				var data commands.Subscribe
+				err := json.Unmarshal(command.Data, &data)
+				if err != nil {
+					ws.CloseHandler()(websocket.ClosePolicyViolation, err.Error())
+					return
+				}
+
+				if err := data.Validate(); err != nil {
+					ws.CloseHandler()(websocket.ClosePolicyViolation, err.Error())
+					return
+				}
+
+				if data.Interval.ToTimeDuration() == time.Duration(0) {
+					t = time.NewTicker(15 * time.Second)
+				} else {
+					t = time.NewTicker(data.Interval.ToTimeDuration())
+				}
+
+				statuses, err := traefik.ServiceStatus(data.Paths...)
+				if err != nil {
+					ws.CloseHandler()(websocket.CloseInternalServerErr, err.Error())
+					return
+				}
+				_ = ws.WritePreparedMessage(pingMessage)
 				_ = ws.WriteJSON(statuses)
 			}
+
 		}
 	}()
 }

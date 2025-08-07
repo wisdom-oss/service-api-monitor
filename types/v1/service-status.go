@@ -5,7 +5,7 @@ import "time"
 const (
 	ServiceStatusOk     = "ok"
 	ServiceStatusDown   = "down"
-	ServiceStatusIssues = "issues"
+	ServiceStatusIssues = "limited"
 )
 
 type ServiceStatus struct {
