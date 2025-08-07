@@ -17,6 +17,8 @@ channels:
         $ref: "#/components/messages/subscribe"
       update:
         $ref: "#/components/messages/statusUpdate"
+      error:
+        $ref: "#/components/messages/commandError"
 
 operations:
   subscribe:
@@ -32,6 +34,7 @@ operations:
       $ref: "#/channels/status"
     messages:
       - $ref: "#/channels/status/messages/update"
+      - $ref: "#/channels/status/messages/error"
     
 components:
   schemas:
@@ -41,8 +44,13 @@ components:
       properties: 
         command:
           type: string
+        id:
+          type:
+            - string
+            - integer
       required:
         - command
+        - id
 
     subscribe:
       description: command to subscribe to status updates
@@ -71,6 +79,32 @@ components:
       
 
   messages:
+    commandError:
+      title: Command Error
+      summary: a message send if data in a command is invalid
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - type
+          - error
+          - receivedCommand
+        properties: 
+          type:
+            type: string
+            enum:
+              - error
+          relatedTo:
+            type:
+              - string
+              - integer
+            description: the id of the message that made the error happen
+          error:
+            type: string
+          receivedCommand:
+            type: object
+            additionalProperties: true
+
     subscribe:
       title: Subscribe
       contentType: application/json
