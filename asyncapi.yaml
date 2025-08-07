@@ -1,0 +1,66 @@
+asyncapi: 2.0.0
+info:
+  title: Service Monitoring
+  version: 1.0.0
+  description: This service allows watching the status of api paths
+
+servers:
+  default:
+    url: "/api/status/v1"
+    protocol: ws
+
+channels: 
+  /:
+    publish:
+      operationId: send
+      message:
+        oneOf:
+          - $ref: "#/components/messages/subscribe"
+    subscribe:
+      operationId: receive
+      message:
+        $ref: '#/components/messages/status'
+            
+        
+  
+
+components:
+  messages:
+    status:
+      title: Status Overview
+      payload:
+        type: array
+        items:
+          type: object
+          properties: 
+            path:
+              type: string
+            lastUpdate:
+              type: string
+              format: date-time
+            status:
+              type: string
+              enum:
+                - ok
+                - down
+                - limited
+    subscribe:
+      title: Subscribe
+      payload:
+        type: object
+        properties: 
+          command:
+            type: string
+            enum:
+              - "subscribe"
+          data:
+            type: object
+            properties: 
+              paths:
+                type: array
+                items:
+                  type: string
+              updateInterval:
+                type: string
+                format: "iso8601-duration"
+                description: how often the server pushes out a new update
