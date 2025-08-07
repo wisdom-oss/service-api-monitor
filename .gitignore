@@ -22,7 +22,7 @@
 !.vscode/*
 !.github/**
 !Dockerfile
-!openapi.yaml
+!asyncapi.yaml
 !/resources/**
 
 # !Makefile
