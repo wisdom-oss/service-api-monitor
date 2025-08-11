@@ -42,13 +42,13 @@ func main() {
 
 	if runHc != nil && *runHc {
 		hcStart := time.Now()
-		ctx := context.WithValue(context.Background(), "plain", true)
+		ctx := context.WithValue(context.Background(), "plain", true) //nolint: staticcheck
 
 		if err := healthchecks.Base(ctx); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			fmt.Fprint(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		fmt.Println("healthcheck successful in", time.Since(hcStart))
+		fmt.Print("healthcheck successful in", time.Since(hcStart))
 		os.Exit(0)
 	}
 
