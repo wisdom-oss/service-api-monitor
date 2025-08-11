@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	flag "github.com/spf13/pflag"
+
+	"microservice/healthchecks"
 	"microservice/internal/configuration"
 	"microservice/router"
 )
@@ -18,9 +22,13 @@ import (
 var headerReadTimeout = 10 * time.Second
 var serverShutdownTimeout = 20 * time.Second
 
+var runHc *bool = flag.Bool("healthcheck", false, "specify to execute healthcheck")
+
 // the main function bootstraps the http server and handlers used for this
 // microservice.
 func main() {
+
+	flag.Parse()
 
 	if err := configuration.Default.Initialize(); err != nil {
 		slog.Error("unable to initialize configuration", "error", err)
@@ -30,6 +38,18 @@ func main() {
 	if err := configuration.Default.Read(); err != nil {
 		slog.Error("unable to parse configuration", "error", err)
 		os.Exit(1)
+	}
+
+	if runHc != nil && *runHc {
+		hcStart := time.Now()
+		ctx := context.WithValue(context.Background(), "plain", true)
+
+		if err := healthchecks.Base(ctx); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("healthcheck successful in", time.Since(hcStart))
+		os.Exit(0)
 	}
 
 	// configure your router
@@ -58,6 +78,13 @@ func main() {
 	// Set up some the signal handling to allow the server to shut down gracefully
 	shutdownSignal := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
+
+	f, err := os.Create(".server-running")
+	if err != nil {
+		slog.Warn("unable to create file indicating the server is running. healthchecks will not test against themselves")
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
 
 	// Block further code execution until the shutdown signal was received
 	<-shutdownSignal

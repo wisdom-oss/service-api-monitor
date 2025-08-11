@@ -9,11 +9,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGE
 
 FROM scratch
 
+LABEL traefik.enable=false
+
 ENV GIN_MODE=release
 
 COPY --from=build-service /etc/ssl/cert.pem /etc/ssl/cert.pem
 COPY --from=build-service /service /service
 ENTRYPOINT ["/service"]
+HEALTHCHECK CMD ["/service", "--healthcheck"]
 EXPOSE 8000
 
 
