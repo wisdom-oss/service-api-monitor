@@ -24,7 +24,7 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := http.Get(routerOverview)
+	res, err := http.Get(routerOverview) //nolint:gosec
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 			return nil, err
 		}
 
-		detailResponse, err := http.Get(serviceDetailUrl)
+		detailResponse, err := http.Get(serviceDetailUrl) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}

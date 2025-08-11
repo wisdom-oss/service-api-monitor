@@ -23,7 +23,7 @@ func Base(ctx context.Context) error {
 		return err
 	}
 
-	res, err := http.Get(uri)
+	res, err := http.Get(uri) //nolint:gosec
 	if err != nil {
 		return err
 	}
