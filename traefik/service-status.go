@@ -58,6 +58,16 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 		}
 	}
 
+	for _, path := range paths {
+		if _, observed := observedRouters[path]; !observed {
+			statuses = append(statuses, v1.ServiceStatus{
+				Path:       path,
+				LastUpdate: time.Now(),
+				Status:     "down",
+			})
+		}
+	}
+
 	for path, router := range observedRouters {
 		serviceName := fmt.Sprintf("%s@%s", router.Service, router.Provider)
 
