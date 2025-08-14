@@ -12,7 +12,7 @@ import (
 	"microservice/internal/configuration"
 )
 
-// Base is a very basic healthcheck that pings the databse server and returns an
+// Base is a very basic healthcheck that pings the database server and returns an
 // error if the connection could not be established.
 func Base(ctx context.Context) error {
 	c := configuration.Default.Viper()
