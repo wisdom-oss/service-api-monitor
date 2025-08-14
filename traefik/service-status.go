@@ -24,7 +24,7 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := http.Get(routerOverview)
+	res, err := http.Get(routerOverview) //nolint:gosec
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +58,16 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 		}
 	}
 
+	for _, path := range paths {
+		if _, observed := observedRouters[path]; !observed {
+			statuses = append(statuses, v1.ServiceStatus{
+				Path:       path,
+				LastUpdate: time.Now(),
+				Status:     "down",
+			})
+		}
+	}
+
 	for path, router := range observedRouters {
 		serviceName := fmt.Sprintf("%s@%s", router.Service, router.Provider)
 
@@ -66,7 +76,7 @@ func ServiceStatus(paths ...string) (statuses []v1.ServiceStatus, err error) {
 			return nil, err
 		}
 
-		detailResponse, err := http.Get(serviceDetailUrl)
+		detailResponse, err := http.Get(serviceDetailUrl) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}

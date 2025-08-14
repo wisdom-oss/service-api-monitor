@@ -10,6 +10,8 @@ import (
 	"github.com/wisdom-oss/common-go/v3/types"
 
 	errorHandler "github.com/wisdom-oss/common-go/v3/middleware/gin/error-handler"
+
+	"microservice/healthchecks"
 )
 
 // requestIDLength determines how long the generated request id will be.
@@ -53,6 +55,15 @@ func prepareRouter() *gin.Engine {
 
 	r.NoRoute(func(c *gin.Context) {
 		ErrRouteNotFound.Emit(c)
+	})
+
+	r.Any("/_/health", func(ctx *gin.Context) {
+		if err := healthchecks.Base(ctx); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		ctx.Status(http.StatusOK)
 	})
 
 	return r

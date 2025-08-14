@@ -6,7 +6,7 @@ import (
 )
 
 type Subscribe struct {
-	Paths    []string          `json:"paths"          validate:"required,dive,gt=0"`
+	Paths    []string          `json:"paths"          validate:"required,gt=0,dive,gt=0"`
 	Interval duration.Duration `json:"updateInterval"`
 }
 
